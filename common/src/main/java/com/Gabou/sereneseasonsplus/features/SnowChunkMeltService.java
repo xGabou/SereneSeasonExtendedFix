@@ -83,6 +83,73 @@ public final class SnowChunkMeltService {
         return changed;
     }
 
+    /**
+     * Clears only positions owned by SSP's persisted chunk index. This avoids a
+     * 16x16 surface scan and, during the chunk-load callback, makes the first
+     * chunk packet already contain the melted state.
+     */
+    public boolean meltSnowInChunkImmediately(ServerLevel level, LevelChunk chunk) {
+        if (!(chunk instanceof ISnowTrackedChunk tracked)) {
+            return false;
+        }
+
+        boolean changed = false;
+        boolean metadataChanged = false;
+        Map<BlockPos, Integer> columns = stateService.getSnowColumns(tracked);
+        if (columns != null && !columns.isEmpty()) {
+            for (BlockPos pos : new ArrayList<>(columns.keySet())) {
+                changed |= clearManagedSnowCompletely(level, pos);
+                stateService.removeTrackedColumn(tracked, pos);
+                metadataChanged = true;
+            }
+        }
+
+        for (BlockPos pos : new java.util.HashSet<>(tracked.sereneseasonsplus$getIceColumns())) {
+            BlockState state = level.getBlockState(pos);
+            if (CommonSnowBlockFeature.SNOW_COMPATIBILITY.isManagedIce(state)) {
+                SnowWorldMutation mutation = CommonSnowBlockFeature.SNOW_COMPATIBILITY.createClearMutation(
+                        level,
+                        pos,
+                        state,
+                        true
+                );
+                changed |= mutation != null && mutation.apply(level);
+            }
+            tracked.sereneseasonsplus$getIceColumns().remove(pos);
+            metadataChanged = true;
+        }
+
+        if (tracked.sereneseasonsplus$getAppliedStormCount() != 0) {
+            tracked.sereneseasonsplus$setAppliedStormCount(0);
+            metadataChanged = true;
+        }
+        if (changed || metadataChanged) {
+            chunk.markUnsaved();
+        }
+        return changed;
+    }
+
+    private boolean clearManagedSnowCompletely(ServerLevel level, BlockPos pos) {
+        boolean changed = false;
+        for (int layer = 0; layer < 8; layer++) {
+            BlockState state = level.getBlockState(pos);
+            if (!CommonSnowBlockFeature.SNOW_COMPATIBILITY.isManagedSnow(state)) {
+                break;
+            }
+            SnowWorldMutation mutation = CommonSnowBlockFeature.SNOW_COMPATIBILITY.createClearMutation(
+                    level,
+                    pos,
+                    state,
+                    false
+            );
+            if (mutation == null || !mutation.apply(level)) {
+                break;
+            }
+            changed = true;
+        }
+        return changed;
+    }
+
     public boolean clearCoveredMeltablesNearSurface(ServerLevel level, LevelChunk chunk) {
         boolean changed = false;
         ChunkPos chunkPos = chunk.getPos();

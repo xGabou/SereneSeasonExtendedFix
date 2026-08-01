@@ -127,7 +127,6 @@ public class CommonSnowBlockFeature {
         tickCounter = 0;
         ChunkQueue.clear();
         MUTATION_BATCH.clear();
-        LOAD_RECONCILER.clear();
         pendingColumnUpdates.clear();
         applyCycleTotal = 0;
         applyCycleProcessed = 0;
@@ -150,8 +149,6 @@ public class CommonSnowBlockFeature {
             needUpdateSnowFeature = false;
         }
 
-        chunkHandler(level);
-
         if (level.random.nextInt(16) == 0 || (EnvironmentHelper.isHotSeason() && level.random.nextInt(2) == 0)) {
             updatePlayerPositions(level.players());
             processPassiveSnowBlocks(level);
@@ -162,25 +159,21 @@ public class CommonSnowBlockFeature {
         drainQueuedMutations(level);
     }
 
-    // On chunk load, only cache surface height; do not enqueue or modify snow lists
+    // Reconcile before the chunk is sent to clients so stale terrain never pops in.
     public static void handleOnChunkLoad(LevelChunk chunk) {
-        if (isSnowFeatureEnabled()) {
-            LOAD_RECONCILER.enqueue(chunk);
-        }
-    }
-
-    protected static void chunkHandler(ServerLevel level) {
-        if (!LOAD_RECONCILER.hasPendingLoads()) {
+        if (!isSnowFeatureEnabled() || !(chunk.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        long deadline = System.nanoTime() + SnowProcessingLimits.CHUNK_LOAD_RECONCILE_BUDGET_NANOS;
-        LOAD_RECONCILER.process(
-                level,
-                SNOW_COMPATIBILITY,
-                SnowProcessingLimits.MIN_CHUNK_LOAD_RECONCILES_PER_TICK,
-                SnowProcessingLimits.MAX_CHUNK_LOAD_RECONCILES_PER_TICK,
-                deadline
-        );
+        if (!level.getServer().isSameThread()) {
+            level.getServer().execute(() -> {
+                ChunkPos chunkPos = chunk.getPos();
+                if (level.getChunkSource().getChunk(chunkPos.x, chunkPos.z, false) == chunk) {
+                    LOAD_RECONCILER.reconcile(level, chunk);
+                }
+            });
+            return;
+        }
+        LOAD_RECONCILER.reconcile(level, chunk);
     }
 
     private static void drainChunkQueue(MinecraftServer server, ServerLevel level) {
@@ -348,6 +341,14 @@ public class CommonSnowBlockFeature {
         return CHUNK_APPLY_SERVICE.applySnowHistoryPass(level, chunk);
     }
 
+    static boolean applySnowForCurrentStormCountImmediately(ServerLevel level, LevelChunk chunk) {
+        return CHUNK_APPLY_SERVICE.applySnowForCurrentStormCountImmediately(level, chunk);
+    }
+
+    static boolean hasApplicableStormRecord(ServerLevel level) {
+        return CHUNK_APPLY_SERVICE.hasApplicableStormRecord(level);
+    }
+
     // Attempts to freeze a water block at pos if conditions are met. Returns true if a block changed.
     public static boolean tryFreezeWaterAt(ServerLevel level, BlockPos pos) {
         if (pos == null) return false;
@@ -409,6 +410,10 @@ public class CommonSnowBlockFeature {
 
     public static boolean meltSnowInChunk(ServerLevel level, ChunkPos chunkPos, boolean fullClear) {
         return CHUNK_MELT_SERVICE.meltSnowInChunk(level, chunkPos, fullClear);
+    }
+
+    static boolean meltSnowInChunkImmediately(ServerLevel level, LevelChunk chunk) {
+        return CHUNK_MELT_SERVICE.meltSnowInChunkImmediately(level, chunk);
     }
 
     protected static boolean clearCoveredMeltablesNearSurface(ServerLevel level, LevelChunk chunk) {
@@ -637,7 +642,6 @@ public class CommonSnowBlockFeature {
         playerPositions.clear();
         ChunkQueue.clear();
         MUTATION_BATCH.clear();
-        LOAD_RECONCILER.clear();
         pendingColumnUpdates.clear();
         applyCycleTotal = 0;
         applyCycleProcessed = 0;

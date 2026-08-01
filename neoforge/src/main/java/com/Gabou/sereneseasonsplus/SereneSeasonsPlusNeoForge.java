@@ -117,7 +117,7 @@ public class SereneSeasonsPlusNeoForge extends SereneSeasonPlusCommon {
 
     @SubscribeEvent
     /**
-     * Queues chunk processing when chunks load (e.g., as players move),
+     * Reconciles SSP-owned snow when chunks load (e.g., as players move),
      * so snow/ice are cleared or accelerated-melted immediately without rejoining.
      */
     public void onChunkLoad(ChunkEvent.Load event) {
