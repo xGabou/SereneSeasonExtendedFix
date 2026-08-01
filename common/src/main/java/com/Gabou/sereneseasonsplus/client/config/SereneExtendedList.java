@@ -33,7 +33,7 @@ public class SereneExtendedList extends ObjectSelectionList<SereneExtendedList.R
      */
     @Override
     public int getRowWidth() {
-        return 360;
+        return Math.min(400, Math.max(240, this.getWidth() - 20));
     }
 
     /**
@@ -78,13 +78,14 @@ public class SereneExtendedList extends ObjectSelectionList<SereneExtendedList.R
             if (x == lastX && y == lastY && rowWidth == lastRowW && rowHeight == lastRowH) return;
             lastX = x; lastY = y; lastRowW = rowWidth; lastRowH = rowHeight;
 
-            final int wx = x + rowWidth - 200;
+            final int widgetWidth = Math.min(180, Math.max(120, rowWidth / 2));
+            final int wx = x + rowWidth - widgetWidth;
             final int wy = y + (rowHeight - 20) / 2;
 
             for (AbstractWidget w : widgets) {
                 if (w.getX() != wx) w.setX(wx);
                 if (w.getY() != wy) w.setY(wy);
-                if (w.getWidth() != 200) w.setWidth(200);
+                if (w.getWidth() != widgetWidth) w.setWidth(widgetWidth);
             }
         }
 
