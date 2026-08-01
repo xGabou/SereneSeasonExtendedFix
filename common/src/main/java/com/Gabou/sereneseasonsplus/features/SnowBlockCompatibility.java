@@ -35,14 +35,16 @@ public interface SnowBlockCompatibility {
                 return null;
             }
             BlockState newState = createManagedSnow(targetLayers);
-            return SnowWorldMutation.setBlock(pos, newState, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+            return SnowWorldMutation.setBlockIfStateMatches(
+                    pos, state, newState, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
         }
         if (allowPlace && (state.isAir() || isReplaceableForSnow(state))) {
             if (!canPlaceManagedSnow(level, pos, state)) {
                 return null;
             }
             BlockState snow = createManagedSnow(targetLayers);
-            return SnowWorldMutation.setBlock(pos, snow, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
+            return SnowWorldMutation.setBlockIfStateMatches(
+                    pos, state, snow, net.minecraft.world.level.block.Block.UPDATE_CLIENTS);
         }
         return null;
     }
@@ -52,16 +54,19 @@ public interface SnowBlockCompatibility {
         BlockState target;
         if (isManagedIce(state)) {
             target = net.minecraft.world.level.block.Blocks.WATER.defaultBlockState();
-        } else {
+        } else if (isManagedSnow(state) || isReplaceableForSnow(state)) {
             target = toWater
                     ? net.minecraft.world.level.block.Blocks.WATER.defaultBlockState()
                     : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+        } else {
+            return null;
         }
         if (state.is(target.getBlock())) {
             return null;
         }
-        return SnowWorldMutation.setBlock(
+        return SnowWorldMutation.setBlockIfStateMatches(
                 pos,
+                state,
                 target,
                 net.minecraft.world.level.block.Block.UPDATE_CLIENTS | net.minecraft.world.level.block.Block.UPDATE_SUPPRESS_DROPS
         );
