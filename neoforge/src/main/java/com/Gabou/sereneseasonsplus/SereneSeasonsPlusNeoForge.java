@@ -110,7 +110,7 @@ public class SereneSeasonsPlusNeoForge extends SereneSeasonPlusCommon {
         if (event.getLevel().isClientSide() || !event.hasTime())return;
         ServerLevel level = (ServerLevel) event.getLevel();
         if( level.dimension() != Level.OVERWORLD) return;
-        this.onTick(level, SereneExtendedConfig.ENABLE_SEASONAL_DAYLIGHT_CYCLE.get(), SereneExtendedConfig.ENABLE_BETTER_DAYS_DYNAMIC_TIME_COMPAT.get(), SereneExtendedConfig.CUSTOM_CYCLE_LENGTH.get(), SereneExtendedConfig.CUSTOM_DAY_LENGTH.get(), SereneExtendedConfig.CUSTOM_NIGHT_LENGTH.get());
+        this.onTick(level, SereneExtendedConfig.ENABLE_SEASONAL_DAYLIGHT_CYCLE.get(), SereneExtendedConfig.ENABLE_BETTER_DAYS_DYNAMIC_TIME_COMPAT.get(), SereneExtendedConfig.CUSTOM_CYCLE_LENGTH.get(), SereneExtendedConfig.CUSTOM_DAY_LENGTH.get(), SereneExtendedConfig.CUSTOM_NIGHT_LENGTH.get(), SereneExtendedConfig::getSeasonalTimeSpeeds);
         CommonSnowBlockFeature.handleServerTick(level.getServer(), level);
 
     }

@@ -17,6 +17,7 @@ public class SnowHistorySavedData {
     private static volatile SnowHistorySavedData INSTANCE;
 
     public int currentStormId = 0;
+    public int snowSyncGeneration = 0;
     public final Map<Integer, SnowRecord> snowHistory = new HashMap<>();
 
     // ============================================================
@@ -39,6 +40,7 @@ public class SnowHistorySavedData {
     public void save() {
         CompoundTag tag = new CompoundTag();
         tag.putInt("CurrentStormId", currentStormId);
+        tag.putInt("SnowSyncGeneration", snowSyncGeneration);
 
         ListTag list = new ListTag();
         for (Map.Entry<Integer, SnowRecord> e : snowHistory.entrySet()) {
@@ -72,6 +74,7 @@ public class SnowHistorySavedData {
             CompoundTag tag = NbtIo.readCompressed(in, NbtAccounter.unlimitedHeap());
 
             this.currentStormId = tag.getInt("CurrentStormId").get();
+            this.snowSyncGeneration = tag.getInt("SnowSyncGeneration").orElse(0);
 
             ListTag list = tag.getList("SnowHistory").get();
             for (int i = 0; i < list.size(); i++) {

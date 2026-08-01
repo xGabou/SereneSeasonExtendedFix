@@ -55,6 +55,12 @@ public class LevelChunkSnowMixin implements ISnowTrackedChunk {
     @Unique
     private int sereneseasonsplus$lastProgressTick = 0;
 
+    @Unique
+    private int sereneseasonsplus$snowSyncGeneration = -1;
+
+    @Unique
+    private int sereneseasonsplus$appliedStormCount = 0;
+
     @Override
     public int sereneseasonsplus$getLastWinterId() {
         return sereneseasonsplus$lastWinterId;
@@ -146,6 +152,26 @@ public class LevelChunkSnowMixin implements ISnowTrackedChunk {
         sereneseasonsplus$lastProgressTick = tick;
     }
 
+    @Override
+    public int sereneseasonsplus$getSnowSyncGeneration() {
+        return sereneseasonsplus$snowSyncGeneration;
+    }
+
+    @Override
+    public void sereneseasonsplus$setSnowSyncGeneration(int generation) {
+        sereneseasonsplus$snowSyncGeneration = generation;
+    }
+
+    @Override
+    public int sereneseasonsplus$getAppliedStormCount() {
+        return sereneseasonsplus$appliedStormCount;
+    }
+
+    @Override
+    public void sereneseasonsplus$setAppliedStormCount(int count) {
+        sereneseasonsplus$appliedStormCount = Math.max(0, count);
+    }
+
     @Inject(
             method = "<init>(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/chunk/ProtoChunk;Lnet/minecraft/world/level/chunk/LevelChunk$PostLoadProcessor;)V",
             at = @At("TAIL"))
@@ -165,6 +191,8 @@ public class LevelChunkSnowMixin implements ISnowTrackedChunk {
             target.sereneseasonsplus$setSurfaceHeight(src.sereneseasonsplus$getSurfaceHeight());
             target.sereneseasonsplus$setAvailableSnowColumns(src.sereneseasonsplus$getAvailableSnowColumns());
             target.sereneseasonsplus$setDestroyedStormId(src.sereneseasonsplus$getDestroyedStormId());
+            target.sereneseasonsplus$setSnowSyncGeneration(src.sereneseasonsplus$getSnowSyncGeneration());
+            target.sereneseasonsplus$setAppliedStormCount(src.sereneseasonsplus$getAppliedStormCount());
             target.sereneseasonsplus$getDestroyedColumns().clear();
             target.sereneseasonsplus$getDestroyedColumns().addAll(src.sereneseasonsplus$getDestroyedColumns());
         }

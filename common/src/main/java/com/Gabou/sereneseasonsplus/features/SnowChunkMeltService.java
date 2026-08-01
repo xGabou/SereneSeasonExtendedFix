@@ -117,8 +117,9 @@ public final class SnowChunkMeltService {
         for (BlockPos pos : copy) {
             BlockState state = level.getBlockState(pos);
             if (CommonSnowBlockFeature.SNOW_COMPATIBILITY.isManagedIce(state)) {
-                CommonSnowBlockFeature.queueChange(
+                CommonSnowBlockFeature.queueChangeIfStateMatches(
                         pos,
+                        state,
                         Blocks.WATER.defaultBlockState(),
                         Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS
                 );

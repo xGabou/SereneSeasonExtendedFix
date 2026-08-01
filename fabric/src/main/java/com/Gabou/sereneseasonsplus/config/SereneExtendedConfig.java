@@ -1,11 +1,13 @@
 package com.Gabou.sereneseasonsplus.config;
 
+import com.Gabou.sereneseasonsplus.SereneSeasonPlusCommon;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import net.fabricmc.loader.api.FabricLoader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import sereneseasons.api.season.Season;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -13,7 +15,10 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 public class SereneExtendedConfig {
     private static final Logger LOGGER = LogManager.getLogger("SereneExtendedConfig");
@@ -31,6 +36,8 @@ public class SereneExtendedConfig {
     public static final BooleanValue SNOWSTORM_ENABLED;
     public static final IntValue MAX_SNOW_ACCUMULATION_LAYERS;
     public static final BooleanValue GRASSFLOWER_GROWTH_ENABLED;
+    private static final Map<Season.SubSeason, DoubleValue> SEASONAL_DAY_SPEEDS = new EnumMap<>(Season.SubSeason.class);
+    private static final Map<Season.SubSeason, DoubleValue> SEASONAL_NIGHT_SPEEDS = new EnumMap<>(Season.SubSeason.class);
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("sereneseasonsplus.json");
@@ -57,6 +64,13 @@ public class SereneExtendedConfig {
         CUSTOM_CYCLE_LENGTH = new BooleanValue("customCycleLength", false);
         CUSTOM_DAY_LENGTH = new DoubleValue("customDayLength", 1.0, 0.05, 100.0);
         CUSTOM_NIGHT_LENGTH = new DoubleValue("customNightLength", 1.0, 0.05, 100.0);
+
+        for (Season.SubSeason subSeason : Season.SubSeason.values()) {
+            SereneSeasonPlusCommon.TimeSpeeds defaults = SereneSeasonPlusCommon.getDefaultTimeSpeeds(subSeason);
+            String key = subSeason.name().toLowerCase(Locale.ROOT);
+            SEASONAL_DAY_SPEEDS.put(subSeason, new DoubleValue(key + "DaySpeed", defaults.daySpeed(), 0.05, 100.0));
+            SEASONAL_NIGHT_SPEEDS.put(subSeason, new DoubleValue(key + "NightSpeed", defaults.nightSpeed(), 0.05, 100.0));
+        }
 
         load();
     }
@@ -102,6 +116,8 @@ public class SereneExtendedConfig {
             CUSTOM_CYCLE_LENGTH.load(obj);
             CUSTOM_DAY_LENGTH.load(obj);
             CUSTOM_NIGHT_LENGTH.load(obj);
+            for (DoubleValue value : SEASONAL_DAY_SPEEDS.values()) value.load(obj);
+            for (DoubleValue value : SEASONAL_NIGHT_SPEEDS.values()) value.load(obj);
         } catch (Exception ignored) {
         }
         notifyReloadListeners();
@@ -124,12 +140,23 @@ public class SereneExtendedConfig {
             CUSTOM_CYCLE_LENGTH.save(obj);
             CUSTOM_DAY_LENGTH.save(obj);
             CUSTOM_NIGHT_LENGTH.save(obj);
+            for (DoubleValue value : SEASONAL_DAY_SPEEDS.values()) value.save(obj);
+            for (DoubleValue value : SEASONAL_NIGHT_SPEEDS.values()) value.save(obj);
             try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
                 GSON.toJson(obj, writer);
             }
         } catch (IOException ignored) {
         }
         notifyReloadListeners();
+    }
+
+    public static SereneSeasonPlusCommon.TimeSpeeds getSeasonalTimeSpeeds(Season.SubSeason subSeason) {
+        DoubleValue daySpeed = SEASONAL_DAY_SPEEDS.get(subSeason);
+        DoubleValue nightSpeed = SEASONAL_NIGHT_SPEEDS.get(subSeason);
+        if (daySpeed == null || nightSpeed == null) {
+            return SereneSeasonPlusCommon.getDefaultTimeSpeeds(subSeason);
+        }
+        return new SereneSeasonPlusCommon.TimeSpeeds(daySpeed.get(), nightSpeed.get());
     }
 
     public static final class BooleanValue {

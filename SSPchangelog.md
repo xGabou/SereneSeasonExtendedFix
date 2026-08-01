@@ -1,27 +1,17 @@
-# Serene Seasons Plus v5.1.0
-
-## Highlights
-
-- Snow updates should now appear much faster when chunks load or seasons change.
-- Snow placement is safer around important blocks.
-- Winter snow can still cover natural ground clutter like grass, tall grass, flowers, ferns, and leaf litter.
-- Grass and flower regrowth is more natural and no longer only brings back dandelions.
+# Serene Seasons Plus v5.2.0
 
 ## Fixed
 
-- Snow should no longer delete important blocks such as rails, buttons, levers, and carpets.
-- Improved snow replacement behavior so natural plants can be covered by snow without breaking protected blocks.
-- Fixed the old Snow Real Magic compatibility path that could prevent normal snow logic from running correctly.
-- Improved Better Days compatibility messaging so users know when SSP is changing Better Days time speeds.
+- Snow placement now treats the `sereneseasonsplus:snow_replaceable` block tag as the single authority for replacing non-air blocks.
+- Snow can no longer overwrite protected blocks through vanilla precipitation redirects or delayed world-mutation queues.
+- Delayed snow changes now verify that the block still matches the state seen when the change was queued, protecting rails and other blocks placed in the meantime.
+- Snow clearing no longer removes unrelated blocks when tracked snow data becomes stale.
+- Fixed the config screen applying Minecraft's background blur twice.
+- Fixed config-screen sizing, clipped controls, toggle state updates, validation feedback, and NeoForge config saving.
+- Updated chunk snow restoration to the current per-storm synchronization behavior used by the other supported versions.
 
-## Improved
+## Changed
 
-- Snow processing is now much more responsive without trying to do all work in one laggy tick.
-- Chunk loading snow sync is faster and should feel closer to instant.
-- Performance handling for snow replacement and melting has been smoothed out.
-- Shared Fabric and NeoForge screens were cleaned up, reducing duplicate code and future maintenance issues.
-
-## Notes
-
-- Better Days dynamic time compatibility is now clearly exposed as a config option.
-- On newer versions, Better Days' own seasonal time system is preferred when available.
+- Natural ground-cover replacements are now declared explicitly in the snow-replaceable tag instead of being accepted by a hidden fallback.
+- Removed the older snow-deficit and destroyed-column reapplication behavior.
+- CurseForge publishing now uses Mod Publisher and produces release uploads for version 5.2.0.

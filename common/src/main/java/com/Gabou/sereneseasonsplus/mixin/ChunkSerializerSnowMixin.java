@@ -44,6 +44,8 @@ public abstract class ChunkSerializerSnowMixin {
         tag.putInt("LastProgressTick", tracked.sereneseasonsplus$getLastProgressTick());
         tag.putInt("AvailableColumns", tracked.sereneseasonsplus$getAvailableSnowColumns());
         tag.putInt("DestroyedStormId", tracked.sereneseasonsplus$getDestroyedStormId());
+        tag.putInt("SnowSyncGeneration", tracked.sereneseasonsplus$getSnowSyncGeneration());
+        tag.putInt("AppliedStormCount", tracked.sereneseasonsplus$getAppliedStormCount());
 
         // Snow columns
         ListTag snowList = new ListTag();
@@ -110,6 +112,10 @@ public abstract class ChunkSerializerSnowMixin {
             tracked.sereneseasonsplus$setAvailableSnowColumns(tag.getInt("AvailableColumns").get());
         if (tag.contains("DestroyedStormId"))
             tracked.sereneseasonsplus$setDestroyedStormId(tag.getInt("DestroyedStormId").get());
+        if (tag.contains("SnowSyncGeneration"))
+            tracked.sereneseasonsplus$setSnowSyncGeneration(tag.getInt("SnowSyncGeneration").get());
+        if (tag.contains("AppliedStormCount"))
+            tracked.sereneseasonsplus$setAppliedStormCount(tag.getInt("AppliedStormCount").get());
 
         // Snow columns
         tracked.sereneseasonsplus$getSnowColumns().clear();

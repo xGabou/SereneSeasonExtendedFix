@@ -78,7 +78,7 @@ public class NeoForgeSnowEnvironmentHandler extends DefaultSnowEnvironmentHandle
         hist.snowHistory.put(hist.currentStormId, rec);
         SnowHistorySavedData.get().snowHistory.put(hist.currentStormId, rec);
 
-        hist.save();
+        CommonSnowBlockFeature.bumpSnowSyncGeneration();
         persist(level, data);
     }
 

@@ -62,12 +62,10 @@ public final class SnowMutationBatch {
         if (current.is(wanted.getBlock())) {
             return false;
         }
-        queueChange(pos, wanted, Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
+        queueMutation(SnowWorldMutation.setBlockIfStateMatches(
+                pos, current, wanted, Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS
+        ));
         return true;
-    }
-
-    public void queueChange(BlockPos pos, BlockState state, int flags) {
-        queueMutation(SnowWorldMutation.setBlock(pos, state, flags));
     }
 
     public void queueMutation(SnowWorldMutation mutation) {

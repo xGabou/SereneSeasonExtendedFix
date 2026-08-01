@@ -26,7 +26,6 @@ import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.gamerules.GameRules;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkSource;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -106,6 +105,20 @@ public class CommonSnowBlockFeature {
 
     public static int getTickCounter() {
         return tickCounter;
+    }
+
+    public static int getSnowSyncGeneration() {
+        return SnowHistorySavedData.get().snowSyncGeneration;
+    }
+
+    public static void bumpSnowSyncGeneration() {
+        SnowHistorySavedData data = SnowHistorySavedData.get();
+        data.snowSyncGeneration++;
+        data.save();
+    }
+
+    public static void markSnowSyncSatisfied(ISnowTrackedChunk tracked) {
+        tracked.sereneseasonsplus$setSnowSyncGeneration(getSnowSyncGeneration());
     }
 
 
@@ -238,19 +251,19 @@ public class CommonSnowBlockFeature {
         }
 
         boolean changed = switch (entry.type()) {
-            case APPLY_SNOW -> {
-                boolean synced = syncTrackedColumnsToWorld(level, chunk);
-                if (!synced) {
-                    synced = applySnowHistoryPass(level, chunk);
-                }
-                if (!synced) {
-                    synced = applySnowPatternFromActiveRecord(level, chunk);
-                }
-                yield synced;
-            }
+            case APPLY_SNOW -> CHUNK_APPLY_SERVICE.applySnowForCurrentStormCount(level, chunk);
             case MELT_SNOW -> meltSnowInChunk(level, chunkPos, entry.fullClear());
             case RETRY -> false;
         };
+
+        if (entry.type() == ChunkQueue.TaskType.APPLY_SNOW && chunk instanceof ISnowTrackedChunk tracked) {
+            int serverStormCount = HANDLER.getSnowStormsThisWinter(level);
+            if (serverStormCount > 0 && CHUNK_APPLY_SERVICE.hasApplicableStormRecord(level)) {
+                tracked.sereneseasonsplus$setAppliedStormCount(serverStormCount);
+                markSnowSyncSatisfied(tracked);
+                chunk.markUnsaved();
+            }
+        }
 
         if (changed) {
             MUTATION_BATCH.markChunkDirty(chunkPos);
@@ -445,50 +458,12 @@ public class CommonSnowBlockFeature {
         }
     }
 
-    public static boolean isSnowReplaceableGroundCover(BlockState state) {
-        if (state.isAir()) {
-            return false;
-        }
-        if (state.is(Blocks.SHORT_GRASS)
-                || state.is(Blocks.TALL_GRASS)
-                || state.is(Blocks.FERN)
-                || state.is(Blocks.LARGE_FERN)
-                || state.is(Blocks.DEAD_BUSH)) {
-            return true;
-        }
-        if (state.is(BlockTags.FLOWERS) || state.is(SSPTags.Blocks.FLOWERS)) {
-            return true;
-        }
-
-        String blockPath = net.minecraft.core.registries.BuiltInRegistries.BLOCK
-                .getKey(state.getBlock())
-                .getPath();
-        return blockPath.contains("leaf_litter") || blockPath.contains("ground_leav");
-    }
-
     /**
      * Unified setter
      * If queue is true we enqueue using the classic queueSnowLayersIfNeeded
      * If queue is false we set immediately
      */
     protected static boolean placeOrQueueLayers(ServerLevel level, BlockPos pos, int targetLayers, boolean allowPlace, boolean queue) {
-        // Skip placement if this column was destroyed during the current storm
-        com.Gabou.sereneseasonsplus.storage.SnowHistorySavedData sd = com.Gabou.sereneseasonsplus.storage.SnowHistorySavedData.get();
-        int activeId = (sd != null) ? sd.currentStormId : 0;
-        if (activeId > 0) {
-            net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunk(pos.getX() >> 4, pos.getZ() >> 4, false);
-            if (chunk instanceof ISnowTrackedChunk tracked) {
-                if (tracked.sereneseasonsplus$getDestroyedStormId() != activeId) {
-                    // Different storm than what was recorded: reset tracking lazily
-                    tracked.sereneseasonsplus$getDestroyedColumns().clear();
-                    tracked.sereneseasonsplus$setDestroyedStormId(activeId);
-                }
-                long xz = (((long) pos.getX()) << 32) ^ (pos.getZ() & 0xffffffffL);
-                if (tracked.sereneseasonsplus$getDestroyedColumns().contains(xz)) {
-                    return false;
-                }
-            }
-        }
         if (queue) {
             return queueSnowLayersIfNeeded(level, pos, targetLayers, allowPlace);
         }
@@ -595,8 +570,8 @@ public class CommonSnowBlockFeature {
         return true;
     }
 
-    protected static void queueChange(BlockPos pos, BlockState state, int flags) {
-        MUTATION_BATCH.queueChange(pos, state, flags);
+    protected static void queueChangeIfStateMatches(BlockPos pos, BlockState expectedState, BlockState state, int flags) {
+        MUTATION_BATCH.queueMutation(SnowWorldMutation.setBlockIfStateMatches(pos, expectedState, state, flags));
     }
 
     // Record a snow column map change to be applied at batch end
@@ -675,6 +650,7 @@ public class CommonSnowBlockFeature {
     }
 
     public static void onConfigReload(int config, boolean snowStorm, int snowHeight) {
+        bumpSnowSyncGeneration();
         if(snowHeight != maxHeightForSnow) {
             maxHeightForSnow = snowHeight;
            needUpdateSnowFeature = true;
@@ -685,6 +661,7 @@ public class CommonSnowBlockFeature {
     }
 
     public static void onSeasonChange(ServerLevel level) {
+        bumpSnowSyncGeneration();
         ChunkQueue.clear();
     }
 

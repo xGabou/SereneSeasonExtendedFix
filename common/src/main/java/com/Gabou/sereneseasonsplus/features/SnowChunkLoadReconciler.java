@@ -108,12 +108,8 @@ public final class SnowChunkLoadReconciler {
                 chunkPos.getMiddleBlockPosition(sampleY)
         );
 
-        if (stateService.hasTrackedSnow(tracked)) {
-            if (coldEnough) {
-                CommonSnowBlockFeature.enqueueChunkForSnowApply(chunkPos, currentSeason);
-            } else {
-                CommonSnowBlockFeature.enqueueChunkForSnowMelt(chunkPos, false);
-            }
+        if (stateService.hasTrackedSnow(tracked) && !coldEnough) {
+            CommonSnowBlockFeature.enqueueChunkForSnowMelt(chunkPos, false);
             return;
         }
 

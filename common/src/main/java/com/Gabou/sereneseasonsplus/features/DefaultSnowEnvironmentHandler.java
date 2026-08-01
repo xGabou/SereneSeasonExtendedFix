@@ -83,7 +83,7 @@ public class DefaultSnowEnvironmentHandler implements ISnowEnvironmentHandler {
         SnowHistorySavedData hist = SnowHistorySavedData.get();
         hist.currentStormId = 0;
         hist.snowHistory.clear();
-        hist.save();
+        CommonSnowBlockFeature.bumpSnowSyncGeneration();
     }
 
     @Override
@@ -104,7 +104,7 @@ public class DefaultSnowEnvironmentHandler implements ISnowEnvironmentHandler {
                     SnowRecord rec = SnowGenerator.generateStormRecord(level.random);
                     hist.snowHistory.put(stormId, rec);
                 }
-                hist.save();
+                CommonSnowBlockFeature.bumpSnowSyncGeneration();
             }
         } else {
             if (!data.activeStorms.isEmpty()) {
@@ -122,7 +122,7 @@ public class DefaultSnowEnvironmentHandler implements ISnowEnvironmentHandler {
                 // Clear active storm marker
                 hist.currentStormId = 0;
 
-                hist.save();
+                CommonSnowBlockFeature.bumpSnowSyncGeneration();
             }
         }
         persist(level, data);
@@ -132,7 +132,7 @@ public class DefaultSnowEnvironmentHandler implements ISnowEnvironmentHandler {
     public int getSnowStormsThisWinter(ServerLevel level) {
         if (!isOverworld(level)) return 0;
         SnowData data = getOrCreateData(level);
-        return data.stormCount - data.activeStorms.size();
+        return data.stormCount + data.activeStorms.size();
     }
 
     @Override

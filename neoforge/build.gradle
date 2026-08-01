@@ -1,7 +1,7 @@
 plugins {
     id 'net.neoforged.gradle.userdev' version '7.1.20'
 //    id "net.neoforged.gradle.mixin" version '7.0.192'
-    id "net.darkhax.curseforgegradle" version "1.1.28"
+    id 'com.hypherionmc.modutils.modpublisher' version '2.1.8'
     id "com.modrinth.minotaur"
 }
 
@@ -119,19 +119,30 @@ modrinth {
     uploadFile = neoforgeUploadJar
 }
 
-tasks.register("curseforgeUploadNeoForge", net.darkhax.curseforgegradle.TaskPublishCurseForge) {
-    apiToken = System.getenv("CURSEFORGE_TOKEN")
-
-    def mainFile = upload(1288843, neoforgeUploadJar.get().asFile)
-    mainFile.releaseType = "beta"
-    mainFile.addGameVersion("1.21.11")
-    mainFile.addModLoader("NeoForge")
-    mainFile.changelog = rootProject.file("SSPchangelog.md").text
-    mainFile.displayName = "NeoForge-${project.version}"
+def curseForgeToken = System.getenv("CURSEFORGE_TOKEN")?.trim()
+if (curseForgeToken) {
+    publisher {
+        apiKeys { curseforge curseForgeToken }
+        setCurseID("1288843")
+        setVersionType("release")
+        setChangelog(rootProject.file("SSPchangelog.md"))
+        setDisplayName("NeoForge-${project.version}")
+        setGameVersions("1.21.11")
+        setLoaders("neoforge")
+        setCurseEnvironment("both")
+        getJavaVersions().set([JavaVersion.VERSION_21])
+        setArtifact(neoforgeUploadJar.get().asFile)
+        setDebug(providers.gradleProperty("publisherDebug").map { it.toBoolean() }.orElse(false).get())
+    }
+} else {
+    project.logger.lifecycle("CURSEFORGE_TOKEN not set; CurseForge upload tasks will be disabled.")
+    tasks.named("publishCurseforge").configure { enabled = false }
 }
 
-
-
-
-
-
+tasks.named("publishCurseforge").configure { dependsOn("build") }
+tasks.register("curseforge1288843") {
+    group = "publishing"
+    description = "Publishes the NeoForge release to CurseForge project 1288843."
+    dependsOn("publishCurseforge")
+    enabled = curseForgeToken != null
+}

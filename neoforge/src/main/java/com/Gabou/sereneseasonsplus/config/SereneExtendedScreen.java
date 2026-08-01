@@ -1,6 +1,5 @@
 package com.Gabou.sereneseasonsplus.config;
 
-import com.Gabou.sereneseasonsplus.SereneSeasonsPlusNeoForge;
 import com.Gabou.sereneseasonsplus.client.config.SereneExtendedList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,6 +15,12 @@ import net.minecraft.network.chat.Component;
  * Simple in-game configuration screen.
  */
 public class SereneExtendedScreen extends Screen {
+    private static final int MAX_PANEL_WIDTH = 440;
+    private static final int PANEL_MARGIN = 16;
+    private static final int PANEL_TOP = 28;
+    private static final int PANEL_BOTTOM_MARGIN = 20;
+    private static final int FOOTER_HEIGHT = 40;
+
     private final Screen parent;
     private boolean snowFeatureEnabled;
     private int tickSnowReplacerThreshold;
@@ -47,6 +52,9 @@ public class SereneExtendedScreen extends Screen {
     private Component grassFlowerLabel = Component.literal("Grass Flower:");
 
     private SereneExtendedList list;
+    private Button seasonalCycleButton;
+    private Button customCycleButton;
+    private Component errorMessage;
     /**
      * Creates the configuration screen.
      *
@@ -72,50 +80,54 @@ public class SereneExtendedScreen extends Screen {
         this.customNightLength = SereneExtendedConfig.CUSTOM_NIGHT_LENGTH.get();
         this.grassFlowerGrowth = SereneExtendedConfig.GRASS_FLOWER_GROWTH_ENABLED.get();
 
-        int panelW = 420;
+        int panelW = Math.min(MAX_PANEL_WIDTH, Math.max(280, this.width - PANEL_MARGIN * 2));
         int panelX = (this.width - panelW) / 2;
-        int top = 40;
-        int bottom = this.height - 40;
+        int top = PANEL_TOP;
+        int bottom = this.height - PANEL_BOTTOM_MARGIN;
+        int listTop = top + 24;
+        int listHeight = Math.max(40, bottom - listTop - FOOTER_HEIGHT);
 
-        this.list = new SereneExtendedList(this.minecraft, panelW, this.height, top + 20, 24);
-        try {
-            this.list.getClass().getMethod("setX", int.class).invoke(this.list, panelX);
-        } catch (Throwable t) {
-
-        }
+        this.list = new SereneExtendedList(this.minecraft, panelW - 16, listHeight, listTop, 24);
+        this.list.setX(panelX + 8);
         this.addRenderableWidget(this.list);
 
-        var snowFeatureBtn = Button.builder(toggleLabel("Snow Features", snowFeatureEnabled), b -> {
+        var snowFeatureBtn = Button.builder(toggleLabel(snowFeatureEnabled), b -> {
             snowFeatureEnabled = !snowFeatureEnabled;
-            b.setMessage(toggleLabel("Snow Features", snowFeatureEnabled));
+            b.setMessage(toggleLabel(snowFeatureEnabled));
         }).bounds(0,0,200,20).build();
         this.list.addRow(Component.literal("Snow Features"), snowFeatureBtn);
 
-        var seasonBtn = Button.builder(toggleLabel("Seasonal Daylight Cycle", seasonalDaylightCycle), b -> {
+        this.seasonalCycleButton = Button.builder(toggleLabel(seasonalDaylightCycle), b -> {
             seasonalDaylightCycle = !seasonalDaylightCycle;
-            customDayCycle = false;
-            b.setMessage(toggleLabel("Seasonal Daylight Cycle", seasonalDaylightCycle));
+            if (seasonalDaylightCycle) {
+                customDayCycle = false;
+                this.customCycleButton.setMessage(toggleLabel(false));
+            }
+            b.setMessage(toggleLabel(seasonalDaylightCycle));
         }).bounds(0,0,200,20).build();
-        this.list.addRow(Component.literal("Seasonal Daylight Cycle"), seasonBtn);
+        this.list.addRow(Component.literal("Seasonal Daylight Cycle"), this.seasonalCycleButton);
 
-        var betterDaysCompatBtn = Button.builder(toggleLabel("Better Days Time Compat", betterDaysDynamicTimeCompat), b -> {
+        var betterDaysCompatBtn = Button.builder(toggleLabel(betterDaysDynamicTimeCompat), b -> {
             betterDaysDynamicTimeCompat = !betterDaysDynamicTimeCompat;
-            b.setMessage(toggleLabel("Better Days Time Compat", betterDaysDynamicTimeCompat));
+            b.setMessage(toggleLabel(betterDaysDynamicTimeCompat));
         }).bounds(0,0,200,20).build();
         this.list.addRow(Component.literal("Better Days Time Compat"), betterDaysCompatBtn);
 
-        var grassFlowerBtn = Button.builder(toggleLabel("Grass and Flower Growth", grassFlowerGrowth), b -> {
+        var grassFlowerBtn = Button.builder(toggleLabel(grassFlowerGrowth), b -> {
             grassFlowerGrowth = !grassFlowerGrowth;
-            b.setMessage(toggleLabel("Grass and Flower Growth", grassFlowerGrowth));
+            b.setMessage(toggleLabel(grassFlowerGrowth));
         }).bounds(0,0,200,20).build();
         this.list.addRow(Component.literal("Grass and Flower Growth"), grassFlowerBtn);
 
-        var customBtn = Button.builder(toggleLabel("Custom Daylight Cycle", customDayCycle), b -> {
+        this.customCycleButton = Button.builder(toggleLabel(customDayCycle), b -> {
             customDayCycle = !customDayCycle;
-            seasonalDaylightCycle = false;
-            b.setMessage(toggleLabel("Custom Daylight Cycle", customDayCycle));
+            if (customDayCycle) {
+                seasonalDaylightCycle = false;
+                this.seasonalCycleButton.setMessage(toggleLabel(false));
+            }
+            b.setMessage(toggleLabel(customDayCycle));
         }).bounds(0,0,200,20).build();
-        this.list.addRow(Component.literal("Custom Daylight Cycle"), customBtn);
+        this.list.addRow(Component.literal("Custom Daylight Cycle"), this.customCycleButton);
 
 
         this.maxReplacerBox = new EditBox(this.font, 0, 0, 200, 20, Component.empty());
@@ -137,9 +149,10 @@ public class SereneExtendedScreen extends Screen {
 
         this.addRenderableWidget(
                 Button.builder(Component.translatable("gui.done"), b -> {
-                    saveChanges();
-                    this.minecraft.setScreen(parent);
-                }).bounds(panelX + (panelW - 200) / 2, bottom - 30, 200, 20).build()
+                    if (saveChanges()) {
+                        this.minecraft.setScreen(parent);
+                    }
+                }).bounds(panelX + (panelW - 200) / 2, bottom - 28, 200, 20).build()
         );
     }
 
@@ -149,29 +162,33 @@ public class SereneExtendedScreen extends Screen {
      * Draws background, panel chrome, and delegates to list/widgets.
      */
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(g, mouseX, mouseY, partialTick);
-
-        int panelW = 480;
-        int panelX = (this.width - panelW) / 2;
-        int top = 40;
-        int bottom = this.height - 40;
-        g.fill(panelX - 4, top - 4, panelX + panelW + 4, bottom, 0xAA000000);
-        g.drawString(this.font, "Serene Seasons Plus", panelX + 6, top - 14, 0xFFFFFF, false);
         super.render(g, mouseX, mouseY, partialTick);
+        if (this.errorMessage != null) {
+            g.drawCenteredString(this.font, this.errorMessage, this.width / 2, this.height - 47, 0xFFFF5555);
+        }
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        int panelW = Math.min(MAX_PANEL_WIDTH, Math.max(280, this.width - PANEL_MARGIN * 2));
+        int panelX = (this.width - panelW) / 2;
+        int bottom = this.height - PANEL_BOTTOM_MARGIN;
+        g.fill(panelX, PANEL_TOP, panelX + panelW, bottom, 0xCC101010);
+        g.drawCenteredString(this.font, this.title, this.width / 2, PANEL_TOP + 8, 0xFFFFFF);
     }
 
     /**
      * Formats a toggle label with ON/OFF state.
      */
-    private Component toggleLabel(String name, boolean enabled) {
-        return Component.literal(name + ": " + (enabled ? "ON" : "OFF"));
+    private Component toggleLabel(boolean enabled) {
+        return Component.literal(enabled ? "ON" : "OFF");
     }
 
     /**
      * Validates inputs and writes changes to config, then persists them.
      */
-    private void saveChanges() {
-        Component errorMessage;
+    private boolean saveChanges() {
         int parsed2 = this.tickSnowReplacerThreshold;
         int parsedSnowHeight = this.maxSnowHeight;
         double parsed3 = this.customDayLength;
@@ -181,17 +198,17 @@ public class SereneExtendedScreen extends Screen {
         try {
             parsed2 = Integer.parseInt(this.maxReplacerBox.getValue());
             parsedSnowHeight = Integer.parseInt(this.maxSnowHeightBox.getValue());
-            errorMessage = null;
         } catch (NumberFormatException ignored) {
-            errorMessage = Component.literal("Invalid number for a Snow setting.");
+            this.errorMessage = Component.literal("Snow settings must be whole numbers.");
+            return false;
         }
 
         try {
             parsed3 = Double.parseDouble(this.dayLengthBox.getValue());
             parsed4 = Double.parseDouble(this.nightLengthBox.getValue());
-            errorMessage = null;
         } catch (NumberFormatException ignored) {
-            errorMessage = Component.literal("Invalid number for one of the DayCycle Speeds.");
+            this.errorMessage = Component.literal("Day and night speeds must be numbers.");
+            return false;
         }
         SereneExtendedConfig.TICK_SNOW_REPLACER.set(parsed2);
         SereneExtendedConfig.SNOWSTORM_ENABLED.set(snowFeatureEnabled);
@@ -204,42 +221,13 @@ public class SereneExtendedScreen extends Screen {
         SereneExtendedConfig.GRASS_FLOWER_GROWTH_ENABLED.set(grassFlowerGrowth);
 
         try {
-            saveToFile();
-            errorMessage = null;
-        } catch (Exception e) {
-            errorMessage = Component.literal("Failed to save config: " + e.getMessage());
+            SereneExtendedConfig.COMMON_SPEC.save();
+            this.errorMessage = null;
+            return true;
+        } catch (RuntimeException exception) {
+            this.errorMessage = Component.literal("Failed to save config: " + exception.getMessage());
+            return false;
         }
-    }
-
-    /**
-     * Persists current settings to the TOML config using NightConfig.
-     */
-    private void saveToFile() {
-        var path = net.neoforged.fml.loading.FMLPaths.CONFIGDIR
-                .get()
-                .resolve(SereneSeasonsPlusNeoForge.MODID + "-common.toml");
-
-        // Build & load config file safely
-        var cfg = com.electronwill.nightconfig.core.file.CommentedFileConfig.builder(path)
-                .sync()
-                .autosave()
-                .preserveInsertionOrder()
-                .build();
-        cfg.load();
-
-        // Update only known keys
-        cfg.set("snowstorm.enabled", snowFeatureEnabled);
-        cfg.set("snowStorms.maxSnowAccumulationLayers", maxSnowHeight);
-        cfg.set("snowPillerAndReplacer.tickSnowReplacer", tickSnowReplacerThreshold);
-        cfg.set("seasonalDaylightCycle.enableSeasonalDaylightCycle", seasonalDaylightCycle);
-        cfg.set("seasonalDaylightCycle.enableBetterDaysDynamicTimeCompat", betterDaysDynamicTimeCompat);
-        cfg.set("seasonalDaylightCycle.customCycleLength", customDayCycle);
-        cfg.set("seasonalDaylightCycle.customDayLength", customDayLength);
-        cfg.set("seasonalDaylightCycle.customNightLength", customNightLength);
-        cfg.set("grassFlowerGrowth.enabled", grassFlowerGrowth);
-
-        cfg.save();
-        cfg.close();
     }
 
 
