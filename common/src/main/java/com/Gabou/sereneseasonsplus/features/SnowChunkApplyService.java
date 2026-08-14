@@ -114,7 +114,12 @@ public final class SnowChunkApplyService {
 
         if (savedData.currentStormId > 0) {
             SnowRecord activeRecord = savedData.snowHistory.get(savedData.currentStormId);
-            return activeRecord != null && applySnowPattern(level, chunk, activeRecord, level.random);
+            return activeRecord != null && applySnowPattern(
+                    level,
+                    chunk,
+                    activeRecord,
+                    createChunkRandom(level, chunk, savedData.currentStormId)
+            );
         }
 
         SnowRecord combined = historyQueryService.aggregateFinishedStormSums(level);
@@ -199,7 +204,7 @@ public final class SnowChunkApplyService {
 
         float progress = 1.0f;
         int currentTick = CommonSnowBlockFeature.getTickCounter();
-        if (catchUp) {
+        if (catchUp || CommonSnowBlockFeature.FAST_PILING_MODE) {
             SnowHistorySavedData savedData = SnowHistorySavedData.get();
             int activeId = savedData != null ? savedData.currentStormId : 0;
             if (activeId > 0) {
