@@ -17,6 +17,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -25,7 +26,6 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 @Mod(SereneSeasonsPlusNeoForge.MODID)
@@ -44,6 +44,7 @@ public class SereneSeasonsPlusNeoForge extends SereneSeasonPlusCommon {
         CommonSnowBlockFeature.HANDLER = new NeoForgeSnowEnvironmentHandler();
         EnvironmentHelper.init(new NeoForgeEnvironmentHelper());
         modContainer.registerConfig(ModConfig.Type.COMMON, SereneExtendedConfig.COMMON_SPEC);
+        modEventBus.addListener(this::onConfigReload);
         if(!isProjectAtmosphereLoaded) {
             SeasonChangeEvent.register();
         }
@@ -133,8 +134,7 @@ public class SereneSeasonsPlusNeoForge extends SereneSeasonPlusCommon {
     }
 
 
-    @SubscribeEvent
-    public void onConfigReload(ServerTickEvent.Pre event) {
+    private void onConfigReload(ModConfigEvent.Reloading event) {
         CommonSnowBlockFeature.onConfigReload(SereneExtendedConfig.TICK_SNOW_REPLACER.get(), SereneExtendedConfig.SNOWSTORM_ENABLED.get(), SereneExtendedConfig.MAX_SNOW_ACCUMULATION_LAYERS.get());
         SereneService.reloadConfig();
     }
