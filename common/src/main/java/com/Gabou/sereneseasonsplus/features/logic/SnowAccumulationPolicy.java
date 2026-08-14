@@ -5,6 +5,7 @@ import com.Gabou.sereneseasonsplus.features.SnowStateService;
 import com.Gabou.sereneseasonsplus.util.EnvironmentHelper;
 import com.Gabou.sereneseasonsplus.access.ISnowTrackedChunk;
 import com.Gabou.sereneseasonsplus.features.CommonSnowBlockFeature;
+import com.Gabou.sereneseasonsplus.storage.SnowHistorySavedData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
@@ -21,6 +22,7 @@ public final class SnowAccumulationPolicy {
         NONE,
         LOAD_RESTORE_TRACKED,
         STORM_COUNT_CHANGED,
+        ACTIVE_STORM_PROGRESS,
         BASELINE_DEFICIT,
         EMPTY_CHUNK_HISTORY,
         AVERAGE_DEFICIT,
@@ -54,8 +56,18 @@ public final class SnowAccumulationPolicy {
         boolean allowApply = snowingNow || isLoadEvent;
 
         if (coldEnoughOverride) {
+            SnowHistorySavedData savedData = SnowHistorySavedData.get();
+            int activeStormId = savedData != null ? savedData.currentStormId : 0;
+            boolean activeStormNeedsProgress = activeStormId > 0
+                    && allowApply
+                    && (tracked.sereneseasonsplus$getStormIdApplied() != activeStormId
+                    || tracked.sereneseasonsplus$getStormProgress() < 1.0f);
+            if (activeStormNeedsProgress) {
+                return new ChunkDecision(Action.APPLY, false, Reason.ACTIVE_STORM_PROGRESS);
+            }
+
             int serverStormCount = CommonSnowBlockFeature.HANDLER.getSnowStormsThisWinter(level);
-            if (serverStormCount > tracked.sereneseasonsplus$getAppliedStormCount() && allowApply) {
+            if (serverStormCount > tracked.sereneseasonsplus$getAppliedStormCount()) {
                 return new ChunkDecision(Action.APPLY, false, Reason.STORM_COUNT_CHANGED);
             }
             return ChunkDecision.none();
