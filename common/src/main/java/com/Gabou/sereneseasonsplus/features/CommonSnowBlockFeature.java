@@ -59,7 +59,8 @@ public class CommonSnowBlockFeature {
 
     protected static final int MAX_ATTEMPTS = SnowProcessingLimits.ACTIVE_SNOW_RANDOM_ATTEMPTS;
     static final int CHUNK_LOAD_MUTATION_FLAGS =
-            net.minecraft.world.level.block.Block.UPDATE_SUPPRESS_DROPS;
+            net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE
+                    | net.minecraft.world.level.block.Block.UPDATE_SUPPRESS_DROPS;
 
     // restored for visibility or metrics during a batch
     static final List<BlockPos> pendingColumnUpdates = new ArrayList<>();
