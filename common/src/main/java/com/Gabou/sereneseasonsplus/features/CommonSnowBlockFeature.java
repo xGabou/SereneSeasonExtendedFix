@@ -58,6 +58,8 @@ public class CommonSnowBlockFeature {
     protected static final SnowChunkLoadReconciler LOAD_RECONCILER = new SnowChunkLoadReconciler(SNOW_STATE_SERVICE);
 
     protected static final int MAX_ATTEMPTS = SnowProcessingLimits.ACTIVE_SNOW_RANDOM_ATTEMPTS;
+    static final int CHUNK_LOAD_MUTATION_FLAGS =
+            net.minecraft.world.level.block.Block.UPDATE_SUPPRESS_DROPS;
 
     // restored for visibility or metrics during a batch
     static final List<BlockPos> pendingColumnUpdates = new ArrayList<>();
@@ -512,7 +514,14 @@ public class CommonSnowBlockFeature {
         if (current == targetLayers && SNOW_COMPATIBILITY.isManagedSnow(state)) {
             return false;
         }
-        SnowWorldMutation mutation = SNOW_COMPATIBILITY.createLayerMutation(level, pos, state, targetLayers, allowPlace);
+        SnowWorldMutation mutation = SNOW_COMPATIBILITY.createLayerMutation(
+                level,
+                pos,
+                state,
+                targetLayers,
+                allowPlace,
+                CHUNK_LOAD_MUTATION_FLAGS
+        );
         return mutation != null && mutation.apply(level);
     }
 
