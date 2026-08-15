@@ -71,6 +71,13 @@ public final class SnowAccumulationPolicy {
                 return new ChunkDecision(Action.APPLY, false, Reason.STORM_COUNT_CHANGED);
             }
 
+            boolean snowSyncRequired = isLoadEvent
+                    && tracked.sereneseasonsplus$getSnowSyncGeneration()
+                    != CommonSnowBlockFeature.getSnowSyncGeneration();
+            if (snowSyncRequired && savedData != null && !savedData.snowHistory.isEmpty()) {
+                return new ChunkDecision(Action.APPLY, false, Reason.LOAD_RESTORE_TRACKED);
+            }
+
             return ChunkDecision.none();
         }
 
