@@ -67,7 +67,8 @@ public final class SnowChunkLoadReconciler {
         }
 
         boolean changed = CommonSnowBlockFeature.applySnowForCurrentStormCountImmediately(level, chunk);
-        if (CommonSnowBlockFeature.hasApplicableStormRecord(level)) {
+        boolean snowStatePresent = stateService.hasTrackedSnow(tracked);
+        if (CommonSnowBlockFeature.hasApplicableStormRecord(level) && (changed || snowStatePresent)) {
             tracked.sereneseasonsplus$setAppliedStormCount(
                     CommonSnowBlockFeature.HANDLER.getSnowStormsThisWinter(level)
             );

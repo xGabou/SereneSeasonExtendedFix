@@ -111,7 +111,8 @@ public final class SnowChunkMeltService {
                         level,
                         pos,
                         state,
-                        true
+                        true,
+                        CommonSnowBlockFeature.CHUNK_LOAD_MUTATION_FLAGS
                 );
                 changed |= mutation != null && mutation.apply(level);
             }
@@ -140,7 +141,8 @@ public final class SnowChunkMeltService {
                     level,
                     pos,
                     state,
-                    false
+                    false,
+                    CommonSnowBlockFeature.CHUNK_LOAD_MUTATION_FLAGS
             );
             if (mutation == null || !mutation.apply(level)) {
                 break;
