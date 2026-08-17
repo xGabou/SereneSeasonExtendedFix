@@ -5,8 +5,7 @@ import com.Gabou.sereneseasonsplus.storage.SnowHistorySavedData;
 import net.Gabou.gaboulibs.storage.SnowRecord;
 import com.Gabou.sereneseasonsplus.util.EnvironmentHelper;
 import net.Gabou.gaboulibs.util.SnowGenerator;
-import net.Gabou.projectatmosphere.manager.ForecastOrchestrator;
-import net.Gabou.projectatmosphere.util.RegionInstanceKey;
+import net.Gabou.projectatmosphere.api.ForecastSampling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import sereneseasons.season.SeasonHooks;
@@ -26,17 +25,19 @@ public class NeoForgeSnowEnvironmentHandler extends DefaultSnowEnvironmentHandle
     public int getBlocksToReplace(ServerLevel level, BlockPos playerPos) {
         if (!SereneSeasonsPlusNeoForge.isProjectAtmosphereLoaded) {
             float temperature = SeasonHooks.getBiomeTemperature(level, level.getBiome(playerPos), playerPos);
-            return SeasonHooks.coldEnoughToSnowSeasonal(level, playerPos)
-                    ? CommonSnowBlockFeature.calculateBlocksToReplace(temperature)
-                    : 0;
+            boolean coldEnough = SeasonHooks.coldEnoughToSnowSeasonal(level, playerPos);
+            if (coldEnough) {
+                return EnvironmentHelper.isRainning(level, playerPos) ? -1 : 0;
+            }
+            return CommonSnowBlockFeature.calculateBlocksToReplace(temperature);
         } else {
-            float temperature = ForecastOrchestrator.getCurrentTemperature(
-                    RegionInstanceKey.from(playerPos),
-                    level.getDayTime()
-            );
-            return temperature >= 0.5F
-                    ? CommonSnowBlockFeature.calculateBlocksToReplace1(temperature)
-                    : -level.random.nextInt(2, 6);
+            float temperature = ForecastSampling.getTemperatureC(level, playerPos);
+            if (temperature < 0.5F) {
+                return EnvironmentHelper.isRainning(level, playerPos)
+                        ? -level.random.nextInt(2, 6)
+                        : 0;
+            }
+            return CommonSnowBlockFeature.calculateBlocksToReplace1(temperature);
         }
     }
 
@@ -45,10 +46,7 @@ public class NeoForgeSnowEnvironmentHandler extends DefaultSnowEnvironmentHandle
         if (!SereneSeasonsPlusNeoForge.isProjectAtmosphereLoaded) {
             return SeasonHooks.coldEnoughToSnowSeasonal(level, pos);
         } else {
-            float temperature = ForecastOrchestrator.getCurrentTemperature(
-                    RegionInstanceKey.from(pos),
-                    level.getDayTime()
-            );
+            float temperature = ForecastSampling.getTemperatureC(level, pos);
             return temperature < 0.5F;
         }
     }

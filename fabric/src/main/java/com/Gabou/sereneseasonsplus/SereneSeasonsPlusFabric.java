@@ -41,7 +41,7 @@ public class SereneSeasonsPlusFabric extends SereneSeasonPlusCommon implements M
         ServerLifecycleEvents.SERVER_STARTING.register(this::onServerStarting);
         ServerLifecycleEvents.SERVER_STOPPING.register(this::onServerStopping);
         EnvironmentHelper.init(new FabricEnvironmentHelper());
-        // Register chunk load to cache surface height only (no enqueue)
+        // Reconcile SSP-owned snow while each chunk is loading
         ServerChunkEvents.CHUNK_LOAD.register(this::onChunkLoad);
         SereneExtendedConfig.registerReloadListener(this::onConfigReload);
 
@@ -78,7 +78,7 @@ public class SereneSeasonsPlusFabric extends SereneSeasonPlusCommon implements M
 
     private void onWorldTick(ServerLevel level) {
         if( level.dimension() != Level.OVERWORLD) return;
-        this.onTick(level, SereneExtendedConfig.ENABLE_SEASONAL_DAYLIGHT_CYCLE.get(), SereneExtendedConfig.ENABLE_BETTER_DAYS_DYNAMIC_TIME_COMPAT.get(), SereneExtendedConfig.CUSTOM_CYCLE_LENGTH.get(), SereneExtendedConfig.CUSTOM_DAY_LENGTH.get(), SereneExtendedConfig.CUSTOM_NIGHT_LENGTH.get());
+        this.onTick(level, SereneExtendedConfig.ENABLE_SEASONAL_DAYLIGHT_CYCLE.get(), SereneExtendedConfig.ENABLE_BETTER_DAYS_DYNAMIC_TIME_COMPAT.get(), SereneExtendedConfig.CUSTOM_CYCLE_LENGTH.get(), SereneExtendedConfig.CUSTOM_DAY_LENGTH.get(), SereneExtendedConfig.CUSTOM_NIGHT_LENGTH.get(), SereneExtendedConfig::getSeasonalTimeSpeeds);
         if (CommonSnowBlockFeature.isSnowFeatureEnabled()) {
             CommonSnowBlockFeature.handleServerTick(level.getServer(), level);
         }
@@ -99,7 +99,7 @@ public class SereneSeasonsPlusFabric extends SereneSeasonPlusCommon implements M
         if (!(chunkAccess instanceof net.minecraft.world.level.chunk.LevelChunk chunk)) return;
         if (level.isClientSide()) return;
         if (level.dimension() != Level.OVERWORLD) return;
-        // Cache surface height only; no enqueue to avoid dual input
+        // Reconcile before the chunk is sent to clients
         CommonSnowBlockFeature.handleOnChunkLoad(chunk);
     }
 
