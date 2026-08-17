@@ -27,6 +27,7 @@ public final class SnowAccumulationPolicy {
         EMPTY_CHUNK_HISTORY,
         AVERAGE_DEFICIT,
         WARM_SEASON_MELT,
+        LOCAL_TEMPERATURE_MELT,
         EARLY_WINTER_NO_STORM_MELT
     }
 
@@ -55,6 +56,22 @@ public final class SnowAccumulationPolicy {
         boolean snowingNow = EnvironmentHelper.isRainning(level, samplePos);
         boolean allowApply = snowingNow || isLoadEvent;
 
+        boolean inWarmSeason = currentSeason.ordinal() >= Season.SubSeason.LATE_SPRING.ordinal()
+                && currentSeason.ordinal() < Season.SubSeason.EARLY_WINTER.ordinal();
+        if (inWarmSeason) {
+            return new ChunkDecision(Action.MELT, true, Reason.WARM_SEASON_MELT);
+        }
+
+        boolean inEarlyWinterNoStorm = currentSeason == Season.SubSeason.EARLY_WINTER
+                && CommonSnowBlockFeature.HANDLER.getSnowStormsThisWinter(level) == 0;
+        if (inEarlyWinterNoStorm) {
+            return new ChunkDecision(Action.MELT, true, Reason.EARLY_WINTER_NO_STORM_MELT);
+        }
+
+        if (!coldEnoughOverride) {
+            return new ChunkDecision(Action.MELT, true, Reason.LOCAL_TEMPERATURE_MELT);
+        }
+
         if (coldEnoughOverride) {
             SnowHistorySavedData savedData = SnowHistorySavedData.get();
             int activeStormId = savedData != null ? savedData.currentStormId : 0;
@@ -77,18 +94,6 @@ public final class SnowAccumulationPolicy {
                 return new ChunkDecision(Action.APPLY, false, Reason.LOAD_RESTORE_TRACKED);
             }
             return ChunkDecision.none();
-        }
-
-        boolean inWarmSeason = currentSeason.ordinal() >= Season.SubSeason.LATE_SPRING.ordinal()
-                && currentSeason.ordinal() < Season.SubSeason.EARLY_WINTER.ordinal();
-        if (inWarmSeason) {
-            return new ChunkDecision(Action.MELT, false, Reason.WARM_SEASON_MELT);
-        }
-
-        boolean inEarlyWinterNoStorm = currentSeason == Season.SubSeason.EARLY_WINTER
-                && com.Gabou.sereneseasonsplus.features.CommonSnowBlockFeature.HANDLER.getSnowStormsThisWinter(level) == 0;
-        if (inEarlyWinterNoStorm) {
-            return new ChunkDecision(Action.MELT, false, Reason.EARLY_WINTER_NO_STORM_MELT);
         }
 
         return ChunkDecision.none();
