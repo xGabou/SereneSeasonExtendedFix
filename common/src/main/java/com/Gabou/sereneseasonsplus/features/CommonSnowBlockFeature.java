@@ -61,6 +61,10 @@ public class CommonSnowBlockFeature {
     static final int CHUNK_LOAD_MUTATION_FLAGS =
             net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE
                     | net.minecraft.world.level.block.Block.UPDATE_SUPPRESS_DROPS;
+    static final int LIVE_MELT_MUTATION_FLAGS =
+            net.minecraft.world.level.block.Block.UPDATE_CLIENTS
+                    | net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE
+                    | net.minecraft.world.level.block.Block.UPDATE_SUPPRESS_DROPS;
 
     // restored for visibility or metrics during a batch
     static final List<BlockPos> pendingColumnUpdates = new ArrayList<>();
@@ -223,7 +227,8 @@ public class CommonSnowBlockFeature {
 
     private static void processChunkQueueEntry(ServerLevel level, ChunkQueue.Entry entry) {
         ChunkPos chunkPos = entry.pos();
-        if (!hasRequiredNeighborChunks(level, chunkPos)) {
+        if (entry.type() == ChunkQueue.TaskType.APPLY_SNOW
+                && !hasRequiredNeighborChunks(level, chunkPos)) {
             if (entry.attempts() < ChunkQueue.MAX_DEFER_ATTEMPTS) {
                 ChunkQueue.requeueDeferred(entry);
             } else {

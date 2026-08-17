@@ -28,20 +28,22 @@ public final class SnowChunkMeltService {
             return false;
         }
 
+        if (fullClear) {
+            return clearTrackedSnowImmediately(
+                    level,
+                    chunk,
+                    tracked,
+                    CommonSnowBlockFeature.LIVE_MELT_MUTATION_FLAGS
+            );
+        }
+
         boolean changed = false;
         Map<BlockPos, Integer> columns = stateService.getSnowColumns(tracked);
         if (columns == null) {
             columns = Collections.emptyMap();
         }
 
-        if (fullClear && !columns.isEmpty()) {
-            for (BlockPos pos : new ArrayList<>(columns.keySet())) {
-                changed |= CommonSnowBlockFeature.queueClearIfNeeded(level, pos, false);
-                stateService.removeTrackedColumn(tracked, pos);
-            }
-        }
-
-        if (!columns.isEmpty() && !fullClear) {
+        if (!columns.isEmpty()) {
             Map<Long, BlockPos> topByColumn = stateService.getTopTrackedSnowByColumn(tracked);
             BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
             for (BlockPos top : topByColumn.values()) {
@@ -92,14 +94,28 @@ public final class SnowChunkMeltService {
             return false;
         }
 
+        return clearTrackedSnowImmediately(
+                level,
+                chunk,
+                tracked,
+                CommonSnowBlockFeature.CHUNK_LOAD_MUTATION_FLAGS
+        );
+    }
+
+    private boolean clearTrackedSnowImmediately(ServerLevel level,
+                                                LevelChunk chunk,
+                                                ISnowTrackedChunk tracked,
+                                                int mutationFlags) {
         boolean changed = false;
         boolean metadataChanged = false;
         Map<BlockPos, Integer> columns = stateService.getSnowColumns(tracked);
         if (columns != null && !columns.isEmpty()) {
             for (BlockPos pos : new ArrayList<>(columns.keySet())) {
-                changed |= clearManagedSnowCompletely(level, pos);
-                stateService.removeTrackedColumn(tracked, pos);
-                metadataChanged = true;
+                changed |= clearManagedSnowCompletely(level, pos, mutationFlags);
+                if (!CommonSnowBlockFeature.SNOW_COMPATIBILITY.isManagedSnow(level.getBlockState(pos))) {
+                    stateService.removeTrackedColumn(tracked, pos);
+                    metadataChanged = true;
+                }
             }
         }
 
@@ -111,12 +127,14 @@ public final class SnowChunkMeltService {
                         pos,
                         state,
                         true,
-                        CommonSnowBlockFeature.CHUNK_LOAD_MUTATION_FLAGS
+                        mutationFlags
                 );
                 changed |= mutation != null && mutation.apply(level);
             }
-            tracked.sereneseasonsplus$getIceColumns().remove(pos);
-            metadataChanged = true;
+            if (!CommonSnowBlockFeature.SNOW_COMPATIBILITY.isManagedIce(level.getBlockState(pos))) {
+                tracked.sereneseasonsplus$getIceColumns().remove(pos);
+                metadataChanged = true;
+            }
         }
 
         if (tracked.sereneseasonsplus$getAppliedStormCount() != 0) {
@@ -129,7 +147,7 @@ public final class SnowChunkMeltService {
         return changed;
     }
 
-    private boolean clearManagedSnowCompletely(ServerLevel level, BlockPos pos) {
+    private boolean clearManagedSnowCompletely(ServerLevel level, BlockPos pos, int mutationFlags) {
         boolean changed = false;
         for (int layer = 0; layer < 8; layer++) {
             BlockState state = level.getBlockState(pos);
@@ -141,7 +159,7 @@ public final class SnowChunkMeltService {
                     pos,
                     state,
                     false,
-                    CommonSnowBlockFeature.CHUNK_LOAD_MUTATION_FLAGS
+                    mutationFlags
             );
             if (mutation == null || !mutation.apply(level)) {
                 break;
